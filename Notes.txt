@@ -1,0 +1,40 @@
+Get a list of files:
+rsync -av --list-only rsync.mirrorservice.org::gutenberg.org | awk '{print $5}' > log_gutenberg
+
+As per here: - https://github.com/openzim/gutenberg/issues/50
+
+We build an rsync filter to exclude anything that is not a ZIP file (or text which we zip in transit depending on what the zip contains):
+https://unix.stackexchange.com/questions/2161/rsync-filter-copying-one-pattern-only/2503#2503
+https://unix.stackexchange.com/questions/368857/rsync-how-do-i-sync-only-certain-filetypes-from-certain-directories
+
+We can exclude old/*
+Any file ending in -h (HTML)
+-8 just has a different encoding - maybe exclude all files with a -
+-0 = utf-8 , without - is just ASCII
+
+May also need to exclude files.zip and files in files - maybe just exclude anything over 10Mb.
+
+There are a few "music.zip" files - we can maybe delete these.
+
+--exclude old/ - https://unix.stackexchange.com/questions/5774/rsync-excluding-a-particular-subdirectory-and-its-children-where-the-subdirect
+See this guide for more rules. https://www.samba.org/ftp/rsync/rsync.html
+
+Maybe something like this:
+rsync -avm \
+	--max-size=10m \
+	--include="*/" \
+	--exclude="*-*.zip" \
+	--exclude="*/old/*" \
+	--include="*.zip" \
+	--exclude="*" \
+	rsync.mirrorservice.org::gutenberg.org /home/ben/Data/Gutenberg
+
+-m flag prunes empty directories
+
+List only
+rsync -avm --list-only --include="*/" --exclude="*-*.zip" --exclude="*/old/*" --include="*.zip" --exclude="*" rsync.mirrorservice.org::gutenberg.org | awk '{print $5}' > log_filtered_gutenberg
+
+
+We may then need to filter based on language.
+
+The index file is a text file that may be used to build an index.
