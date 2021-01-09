@@ -1,5 +1,6 @@
 import string
 import unicodedata
+import numpy as np
 
 
 def decompose_character(char):
@@ -18,8 +19,11 @@ def decompose_character(char):
 class CharDict:
     """ Class to model mapping between characters and integers. """
 
-    def __init__(self):
-        """ Initialise and reverse control characters. """
+    def __init__(self, special=True):
+        """ Initialise and reverse control characters.
+
+        special - boolean flag indicating whether special characters are to be added.
+        """
         # Set character set we will use
         self.character_set = (
                 string.ascii_lowercase +
@@ -30,9 +34,11 @@ class CharDict:
             i: c for i, c in enumerate(self.character_set, start=0)
         }
         cs_len = len(self.reverse_dict)
-        # Reserve special characters
-        self.reverse_dict[cs_len + 0] = "<OOD>"  # Out of dict
-        self.reverse_dict[cs_len + 1] = "<CAPITAL>"  # Out of dict
+        self.special = special
+        if special:
+            # Reserve special characters
+            self.reverse_dict[cs_len + 0] = "<OOD>"  # Out of dict
+            self.reverse_dict[cs_len + 1] = "<CAPITAL>"  # Out of dict
 
         self.vocabulary_size = len(self.reverse_dict)
 
@@ -80,14 +86,16 @@ class CharDict:
                 integer_list.append(self.forward_dict[character])
             elif character in string.ascii_uppercase:
                 # If uppercase
-                integer_list.append(self.forward_dict["<CAPITAL>"])
+                if self.special:
+                    integer_list.append(self.forward_dict["<CAPITAL>"])
                 integer_list.append(self.forward_dict[character.lower()])
             else:
                 replacement_chars = decompose_character(character)
                 if replacement_chars:
                     integer_list += self.text2int("".join(replacement_chars))
                 else:
-                    integer_list.append(self.forward_dict["<OOD>"])
+                    if self.special:
+                        integer_list.append(self.forward_dict["<OOD>"])
         return integer_list
 
     def intlist2text(self, int_list):
@@ -105,4 +113,9 @@ class CharDict:
                 capitalise = False
         return text
 
-    # We need to add a method that returns a one-hot encoding
+    def one_hot(self, integer):
+        """Convert an integer to a one hot vector of max length size."""
+        size = self.vocabulary_size
+        one_hot = np.zeros(shape=(size, 1), dtype=np.uint8)
+        one_hot[integer] = 1
+        return one_hot
